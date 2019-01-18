@@ -1,0 +1,115 @@
+
+package tester;
+
+
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.io.PrintWriter;
+import java.net.InetAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
+public class Cli {
+    
+    InetAddress iP;
+    int servPort = 10000;
+    int fileCount;
+    int id;
+    File fileFolder = new File("D:/TORrent_$_received");
+    File receivedFile = new File ("D:/TORrent_$_received/testR.txt");
+    File[] myFileList = fileFolder.listFiles(); 
+    int maxByteSize = 1024;
+    byte [] byteCarr = new byte[maxByteSize];   
+    Socket clientSock = null;
+    InputStream inStream;
+    OutputStream outStream;
+            
+    public void Client(int id) throws UnknownHostException, IOException {
+        
+        //Socket cSocket = new Socket(servPort);
+        this.id = id;
+        iP = InetAddress.getLocalHost();
+        log(iP.toString());
+        log("client start");
+    }
+    
+    //String serverIP = 
+    //Socket clientSocket = serverSocket().Server.accept();
+    
+    public void log(String s){
+        DateFormat dF = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+        Date d = new Date();
+        System.out.println("  #CLIENT: " + s + ", " + dF.format(d));
+        wait(3);
+    }
+
+    public void wait (int w) {
+        try { 
+            Thread.sleep(w*1000);
+        } catch (InterruptedException e) {e.printStackTrace();}	
+    }
+    
+    public void doAction(String[] args) {
+    	switch (args[0]) {
+		case "SEND": 
+			try {
+				Socket serverSock = new Socket("localhost", servPort + Integer.parseInt(args[1]));
+		    	BufferedReader in = new BufferedReader(new InputStreamReader(serverSock.getInputStream()));
+		    	PrintWriter out = new PrintWriter(serverSock.getOutputStream(), true);
+		    	if(in.readLine().equals("OK")) {
+		    		out.println("SEND " + args[2] + " " + args[3]);
+					File file = new File("D://TORrent_" + id + "/" + args[2]);
+					byte [] bytes  = new byte [(int)file.length()];
+					FileInputStream fis = new FileInputStream(file);
+					BufferedInputStream bis = new BufferedInputStream(fis);
+					bis.read(bytes,0,bytes.length);
+					serverSock.getOutputStream().write(bytes,0,bytes.length);
+					serverSock.getOutputStream().flush();
+					bis.close();
+					serverSock.close();
+		    	}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			break;
+		case "DOWNLOAD": 
+			try {
+				Socket serverSock = new Socket("localhost", Integer.parseInt(args[1]));
+		    	BufferedReader in = new BufferedReader(new InputStreamReader(serverSock.getInputStream()));
+		    	PrintWriter out = new PrintWriter(serverSock.getOutputStream(), true);
+		    	if(in.readLine().equals("OK")) {
+		    		out.println("DOWNLOAD " + args[2]);
+		    		byte [] bytes  = new byte[Integer.parseInt(in.readLine())];
+		    	    InputStream is = serverSock.getInputStream();
+		    	    FileOutputStream fos = new FileOutputStream("D://TORrent_" + id + "/" + args[2]);
+		    	    BufferedOutputStream bos = new BufferedOutputStream(fos);
+					is.read(bytes, 0, bytes.length);
+		    	    bos.write(bytes,0,bytes.length);
+		    	    bos.flush();
+		    	    fos.close();
+		    	    bos.close();
+		    	    serverSock.close();
+		    	}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			break;
+	}
+    }
+    
+    public static void main(String[] args) throws IOException {
+            Cli c = new Cli();
+            c.doAction(args);
+    }
+}
